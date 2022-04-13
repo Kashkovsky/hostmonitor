@@ -2,10 +2,11 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"time"
 )
 
@@ -34,18 +35,26 @@ func GetStringFromURL(url string) (string, error) {
 }
 
 type TestResult struct {
-	url    url.URL
-	status string
+	url      url.URL
+	status   string
+	duration time.Duration
 }
 
 func Test(url *url.URL, timeoutSeconds int, out chan TestResult) {
-	timeOut := time.Duration(timeoutSeconds) * time.Second
-	_, err := net.DialTimeout(url.Scheme, url.Host, timeOut)
+	timeout := time.Duration(timeoutSeconds) * time.Second
+	tp := NewTransport(timeout)
+
+	_, err := tp.Dial(url.Scheme, url.Host)
 
 	if err != nil {
-		out <- TestResult{url: *url, status: err.Error()}
+		out <- TestResult{url: *url, status: formatError(err, url), duration: tp.ConnDuration()}
 		return
 	}
 
-	out <- TestResult{url: *url, status: "OK"}
+	out <- TestResult{url: *url, status: "OK", duration: tp.Duration()}
+}
+
+func formatError(err error, url *url.URL) string {
+	m := regexp.MustCompile(fmt.Sprintf(`(net/http: )| \(.*\)|(dial .* %s: )`, url.Host))
+	return m.ReplaceAllString(err.Error(), "")
 }

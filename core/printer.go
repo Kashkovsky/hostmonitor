@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -33,9 +34,9 @@ func (p *Printer) ToTable(results *[]TestResult) {
 	t := table.NewWriter()
 	t.SetStyle(table.StyleColoredBright)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"#", "Address", "Status"})
-	for i, r := range *results {
-		t.AppendRow(table.Row{i, r.url.Host, r.status})
+	t.AppendHeader(table.Row{"Address", "Connection", "Status"})
+	for _, r := range *results {
+		t.AppendRow(table.Row{r.url.Host, strconv.FormatInt(r.duration.Milliseconds(), 10) + "ms", r.status})
 	}
 
 	t.AppendSeparator()
