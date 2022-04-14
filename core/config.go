@@ -7,6 +7,6 @@ type WatchConfig struct {
 	UpdateInterval int
 }
 
-func (c *WatchConfig) Update() (string, error) {
+func (c *WatchConfig) UpdateURLs() (string, error) {
 	return GetStringFromURL(c.ConfigUrl)
 }

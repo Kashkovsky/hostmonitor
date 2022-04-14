@@ -8,10 +8,11 @@ import (
 )
 
 type Watcher struct {
-	config *WatchConfig
-	tester Tester
-	quit   chan bool
-	out    chan TestResult
+	config  *WatchConfig
+	rawUrls string
+	tester  Tester
+	quit    chan bool
+	out     chan TestResult
 }
 
 func NewWatcher(config *WatchConfig) Watcher {
@@ -28,7 +29,12 @@ func NewWatcher(config *WatchConfig) Watcher {
 
 func (w *Watcher) Watch(f func(TestResult)) {
 	for {
-		err := w.doWatch(f)
+		err := w.update()
+		if err != nil {
+			log.Fatalln("Cannot proceed without config, terminating")
+			return
+		}
+		err = w.doWatch(f)
 
 		if err != nil {
 			log.Fatalf("Fatal: %v", err)
@@ -40,16 +46,29 @@ func (w *Watcher) Watch(f func(TestResult)) {
 	}
 }
 
-func (w *Watcher) doWatch(f func(TestResult)) error {
+func (w *Watcher) update() error {
 	log.Default().Println("Fetching new config...")
-	config, err := w.config.Update()
+	config, err := w.config.UpdateURLs()
 
 	if err != nil {
 		log.Fatalf("Could not obtain a config: %v", err.Error())
-		return err
+		if w.rawUrls == "" {
+			return err
+		}
 	}
 
-	records := strings.Split(config, "\n")
+	if strings.EqualFold(w.rawUrls, config) {
+		log.Default().Println("URLs didn't change")
+	} else {
+		w.rawUrls = config
+		log.Default().Println("New URLs have been applied")
+	}
+
+	return nil
+}
+
+func (w *Watcher) doWatch(f func(TestResult)) error {
+	records := strings.Split(w.rawUrls, "\n")
 	for _, addr := range records {
 		u, err := url.Parse(addr)
 		if err != nil {
