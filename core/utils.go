@@ -35,23 +35,30 @@ func GetStringFromURL(url string) (string, error) {
 }
 
 type TestResult struct {
+	Id       string
 	url      url.URL
 	status   string
 	duration time.Duration
 }
 
-func Test(url *url.URL, timeoutSeconds int, out chan TestResult) {
+func Test(url *url.URL, timeoutSeconds int, testInterval int, out chan TestResult) {
 	timeout := time.Duration(timeoutSeconds) * time.Second
 	tp := NewTransport(timeout)
 
-	_, err := tp.Dial(url.Scheme, url.Host)
+	for {
+		out <- TestResult{Id: url.Host, url: *url, status: "Test"}
 
-	if err != nil {
-		out <- TestResult{url: *url, status: formatError(err, url), duration: tp.ConnDuration()}
-		return
+		_, err := tp.Dial(url.Scheme, url.Host)
+
+		if err != nil {
+			out <- TestResult{Id: url.Host, url: *url, status: formatError(err, url), duration: tp.ConnDuration()}
+			return
+		}
+
+		out <- TestResult{Id: url.Host, url: *url, status: "OK", duration: tp.Duration()}
+		time.Sleep(time.Duration(testInterval) * time.Second)
+
 	}
-
-	out <- TestResult{url: *url, status: "OK", duration: tp.Duration()}
 }
 
 func formatError(err error, url *url.URL) string {

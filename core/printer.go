@@ -5,12 +5,14 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"sync"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 type Printer struct {
 	clearFns map[string]func()
+	t        table.Writer
 }
 
 func NewPrinter() Printer {
@@ -26,21 +28,27 @@ func NewPrinter() Printer {
 		cmd.Run()
 	}
 
-	return Printer{clearFns: clear}
-}
-
-func (p *Printer) ToTable(results *[]TestResult) {
-	p.Clear()
 	t := table.NewWriter()
 	t.SetStyle(table.StyleColoredBright)
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Address", "Connection", "Status"})
-	for _, r := range *results {
-		t.AppendRow(table.Row{r.url.Host, strconv.FormatInt(r.duration.Milliseconds(), 10) + "ms", r.status})
-	}
 
-	t.AppendSeparator()
-	t.Render()
+	return Printer{clearFns: clear, t: t}
+}
+
+func (p *Printer) ToTable(results *sync.Map) {
+	p.Clear()
+	p.t.ResetRows()
+	results.Range(func(k any, r interface{}) bool {
+		testResult, ok := r.(TestResult)
+		if ok {
+			p.t.AppendRow(table.Row{k, strconv.FormatInt(testResult.duration.Milliseconds(), 10) + "ms", testResult.status})
+		}
+		return true
+	})
+	p.t.SortBy([]table.SortBy{{Name: "Address"}})
+	p.t.AppendSeparator()
+	p.t.Render()
 }
 
 func (p *Printer) Clear() {
