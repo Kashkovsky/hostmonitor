@@ -54,13 +54,13 @@ func (t *Tester) Test(url *url.URL) {
 				httpStatus: status,
 				duration:   strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
 			}
+			time.Sleep(t.testInterval)
 		}
-		time.Sleep(t.testInterval)
 	}
 }
 
 func (t *Tester) tcp(url *url.URL) int {
-	tp := NewTransport(t.requestTimeout)
+	tp := NewTransport(time.Second)
 	pass := 0
 	for i := 0; i < 10; i++ {
 		_, err := tp.Dial(url.Scheme, url.Host)
