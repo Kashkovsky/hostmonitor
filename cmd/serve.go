@@ -22,12 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"log"
-	"net/http"
-	"sync"
-
-	"github.com/Kashkovsky/hostmonitor/core"
-	"github.com/gorilla/websocket"
+	"github.com/Kashkovsky/hostmonitor/web"
 	"github.com/spf13/cobra"
 )
 
@@ -38,49 +33,14 @@ var serveCmd = &cobra.Command{
 	Run:   runServe,
 }
 
+var port int
+
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0:8080", "Server address")
+	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "Server port")
 }
-
-var upgrader = websocket.Upgrader{}
-var address string
 
 func runServe(cmd *cobra.Command, args []string) {
-	http.HandleFunc("/ws", serveWs)
-	http.HandleFunc("/", serveHome)
-	log.Fatal(http.ListenAndServe(address, nil))
-}
-
-func serveWs(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-
-	defer c.Close()
-	watcher := core.NewWatcher(&watchConfig)
-	mu := sync.Mutex{}
-
-	watcher.Watch(func(res core.TestResult) {
-		mu.Lock()
-		defer mu.Unlock()
-		err = c.WriteJSON(res)
-		if err != nil {
-			log.Println("write:", err)
-		}
-	})
-}
-
-func serveHome(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	http.ServeFile(w, r, "public/home.html")
+	s := web.NewServer(&watchConfig, port)
+	s.Run()
 }
