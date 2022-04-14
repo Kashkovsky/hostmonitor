@@ -5,15 +5,17 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"time"
 )
 
 type TestResult struct {
 	Id         string
+	InProgress bool
 	url        url.URL
 	tcp        string
 	httpStatus string
-	duration   time.Duration
+	duration   string
 }
 
 type Tester struct {
@@ -38,6 +40,11 @@ func (t *Tester) Test(url *url.URL) {
 		case <-t.quit:
 			return
 		default:
+			t.out <- TestResult{
+				Id:         url.Host,
+				InProgress: true,
+				httpStatus: "Testing...",
+			}
 			pass := t.tcp(url)
 			status, duration := t.http(url)
 			t.out <- TestResult{
@@ -45,11 +52,10 @@ func (t *Tester) Test(url *url.URL) {
 				url:        *url,
 				tcp:        fmt.Sprintf("%d/10", pass),
 				httpStatus: status,
-				duration:   duration,
+				duration:   strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
 			}
-			time.Sleep(t.testInterval)
 		}
-
+		time.Sleep(t.testInterval)
 	}
 }
 

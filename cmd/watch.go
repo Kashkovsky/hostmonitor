@@ -23,6 +23,8 @@ package cmd
 
 import (
 	"log"
+	"time"
+
 	"sync"
 
 	"github.com/Kashkovsky/hostmonitor/core"
@@ -43,17 +45,30 @@ func runWatch(cmd *cobra.Command, args []string) {
 	resMap := sync.Map{}
 	printer := core.NewPrinter()
 	watcher := core.NewWatcher(&watchConfig)
-	
+
+	go func() {
+		for {
+			printer.ToTable(&resMap)
+			time.Sleep(time.Second)
+		}
+	}()
+
 	watcher.Watch(func(res core.TestResult) {
-		resMap.Store(res.Id, res)
-		printer.ToTable(&resMap)
+		if res.InProgress {
+			_, ok := resMap.Load(res.Id)
+			if !ok {
+				resMap.Store(res.Id, res)
+			}
+		} else {
+			resMap.Store(res.Id, res)
+		}
 	})
 }
 
 func init() {
 	rootCmd.AddCommand(watchCmd)
 	watchCmd.Flags().StringVarP(&watchConfig.ConfigUrl, "configUrl", "c", core.ITArmyConfigURL, "Url of config containing url list")
-	watchCmd.Flags().IntVarP(&watchConfig.TestInterval, "testInterval", "i", 10, "Interval in seconds between test updates")
-	watchCmd.Flags().IntVarP(&watchConfig.RequestTimeout, "requestTimeout", "t", 5, "Request timeout")
+	watchCmd.Flags().IntVarP(&watchConfig.TestInterval, "testInterval", "i", 20, "Interval in seconds between test updates")
+	watchCmd.Flags().IntVarP(&watchConfig.RequestTimeout, "requestTimeout", "t", 10, "Request timeout")
 	watchCmd.Flags().IntVarP(&watchConfig.UpdateInterval, "updateInterval", "u", 600, "Config update interval in seconds")
 }

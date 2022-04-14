@@ -28,30 +28,19 @@ func NewWatcher(config *WatchConfig) Watcher {
 
 func (w *Watcher) Watch(f func(TestResult)) {
 	for {
-		err := w.doWatch()
+		err := w.doWatch(f)
 
 		if err != nil {
 			log.Fatalf("Fatal: %v", err)
 			return
 		}
 
-		go func() {
-			for {
-				select {
-				case <-w.quit:
-					return
-				case rec := <-w.out:
-					f(rec)
-				}
-			}
-		}()
-
 		time.Sleep(time.Duration(w.config.UpdateInterval) * time.Second)
 		w.quit <- true
 	}
 }
 
-func (w *Watcher) doWatch() error {
+func (w *Watcher) doWatch(f func(TestResult)) error {
 	log.Default().Println("Fetching new config...")
 	config, err := w.config.Update()
 
@@ -69,6 +58,16 @@ func (w *Watcher) doWatch() error {
 		}
 
 		go w.tester.Test(u)
+		go func() {
+			for {
+				select {
+				case <-w.quit:
+					return
+				case rec := <-w.out:
+					f(rec)
+				}
+			}
+		}()
 	}
 
 	return nil

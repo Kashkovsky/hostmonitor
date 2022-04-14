@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"sync"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -53,7 +52,7 @@ func (p *Printer) ToTable(results *sync.Map) {
 				k,
 				testResult.tcp,
 				testResult.httpStatus,
-				strconv.FormatInt(testResult.duration.Milliseconds(), 10) + "ms",
+				testResult.duration,
 			})
 		}
 		return true
