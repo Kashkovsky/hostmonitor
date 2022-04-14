@@ -15,3 +15,6 @@
 # vendor/
 
 dist/
+node_modules/
+.parcel-cache/
+static/
