@@ -65,8 +65,4 @@ func runWatch(cmd *cobra.Command, args []string) {
 
 func init() {
 	rootCmd.AddCommand(watchCmd)
-	watchCmd.Flags().StringVarP(&watchConfig.ConfigUrl, "configUrl", "c", core.ITArmyConfigURL, "Url of config containing url list")
-	watchCmd.Flags().IntVarP(&watchConfig.TestInterval, "testInterval", "i", 20, "Interval in seconds between test updates")
-	watchCmd.Flags().IntVarP(&watchConfig.RequestTimeout, "requestTimeout", "t", 10, "Request timeout")
-	watchCmd.Flags().IntVarP(&watchConfig.UpdateInterval, "updateInterval", "u", 600, "Config update interval in seconds")
 }

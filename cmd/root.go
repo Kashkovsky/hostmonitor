@@ -45,6 +45,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.hostmonitor.yaml)")
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVarP(&watchConfig.ConfigUrl, "configUrl", "c", core.ITArmyConfigURL, "Url of config containing url list")
+	rootCmd.PersistentFlags().IntVarP(&watchConfig.TestInterval, "testInterval", "i", 20, "Interval in seconds between test updates")
+	rootCmd.PersistentFlags().IntVarP(&watchConfig.RequestTimeout, "requestTimeout", "t", 10, "Request timeout")
+	rootCmd.PersistentFlags().IntVarP(&watchConfig.UpdateInterval, "updateInterval", "u", 600, "Config update interval in seconds")
 }

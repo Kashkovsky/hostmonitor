@@ -1,4 +1,4 @@
 monitor: clean
-	go build -o monitor
+	go build
 clean:
-	rm -f monitor
+	rm -f hostmonitor
