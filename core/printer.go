@@ -50,9 +50,9 @@ func (p *Printer) ToTable(results *sync.Map) {
 		if ok {
 			p.t.AppendRow(table.Row{
 				k,
-				testResult.tcp,
-				testResult.httpStatus,
-				testResult.duration,
+				testResult.Tcp,
+				testResult.HttpStatus,
+				testResult.Duration,
 			})
 		}
 		return true

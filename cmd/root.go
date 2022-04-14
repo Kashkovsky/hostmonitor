@@ -24,10 +24,12 @@ package cmd
 import (
 	"os"
 
+	"github.com/Kashkovsky/hostmonitor/core"
 	"github.com/spf13/cobra"
 )
 
 var cfgFile string
+var watchConfig = core.WatchConfig{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

@@ -31,8 +31,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var watchConfig = core.WatchConfig{}
-
 // watchCmd represents the watch command
 var watchCmd = &cobra.Command{
 	Use:   "watch",

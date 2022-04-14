@@ -10,12 +10,12 @@ import (
 )
 
 type TestResult struct {
-	Id         string
-	InProgress bool
+	Id         string `json:"id"`
+	InProgress bool   `json:"inProgress"`
 	url        url.URL
-	tcp        string
-	httpStatus string
-	duration   string
+	Tcp        string `json:"tcp"`
+	HttpStatus string `json:"httpStatus"`
+	Duration   string `json:"duration"`
 }
 
 type Tester struct {
@@ -43,16 +43,16 @@ func (t *Tester) Test(url *url.URL) {
 			t.out <- TestResult{
 				Id:         url.Host,
 				InProgress: true,
-				httpStatus: "Testing...",
+				HttpStatus: "Testing...",
 			}
 			pass := t.tcp(url)
 			status, duration := t.http(url)
 			t.out <- TestResult{
 				Id:         url.Host,
 				url:        *url,
-				tcp:        fmt.Sprintf("%d/10", pass),
-				httpStatus: status,
-				duration:   strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
+				Tcp:        fmt.Sprintf("%d/10", pass),
+				HttpStatus: status,
+				Duration:   strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
 			}
 			time.Sleep(t.testInterval)
 		}
