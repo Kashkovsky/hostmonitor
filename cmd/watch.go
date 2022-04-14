@@ -31,13 +31,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type WatchConfig struct {
-	configUrl      string
-	testInterval   int
-	requestTimeout int
-}
-
-var watchConfig = WatchConfig{}
+var watchConfig = core.WatchConfig{}
 
 // watchCmd represents the watch command
 var watchCmd = &cobra.Command{
@@ -47,7 +41,7 @@ var watchCmd = &cobra.Command{
 }
 
 func runWatch(cmd *cobra.Command, args []string) {
-	log.Default().Println("Testing URLs from config ", watchConfig.configUrl)
+	log.Default().Println("Testing URLs from config ", watchConfig.ConfigUrl)
 	printer := core.NewPrinter()
 	res := sync.Map{}
 
@@ -65,13 +59,15 @@ func runWatch(cmd *cobra.Command, args []string) {
 }
 
 func doWatch() (chan core.TestResult, int, error) {
-	config, err := core.GetStringFromURL(watchConfig.configUrl)
+	config, err := watchConfig.Update()
 	outC := make(chan core.TestResult, 50)
 	if err != nil {
 		log.Fatalf("Could not obtain a config: %v", err.Error())
 
 		return outC, 0, err
 	}
+
+	tester := core.NewTester(watchConfig, outC)
 
 	records := strings.Split(config, "\n")
 	for _, addr := range records {
@@ -81,7 +77,7 @@ func doWatch() (chan core.TestResult, int, error) {
 			continue
 		}
 
-		go core.Test(u, watchConfig.requestTimeout, watchConfig.testInterval, outC)
+		go tester.Test(u)
 	}
 
 	return outC, len(records), nil
@@ -89,7 +85,7 @@ func doWatch() (chan core.TestResult, int, error) {
 
 func init() {
 	rootCmd.AddCommand(watchCmd)
-	watchCmd.Flags().StringVarP(&watchConfig.configUrl, "configUrl", "c", core.ITArmyConfigURL, "Url of config containing url list")
-	watchCmd.Flags().IntVarP(&watchConfig.testInterval, "testInterval", "i", 10, "Interval in seconds between test updates")
-	watchCmd.Flags().IntVarP(&watchConfig.requestTimeout, "requestTimeout", "t", 5, "Request timeout")
+	watchCmd.Flags().StringVarP(&watchConfig.ConfigUrl, "configUrl", "c", core.ITArmyConfigURL, "Url of config containing url list")
+	watchCmd.Flags().IntVarP(&watchConfig.TestInterval, "testInterval", "i", 10, "Interval in seconds between test updates")
+	watchCmd.Flags().IntVarP(&watchConfig.RequestTimeout, "requestTimeout", "t", 5, "Request timeout")
 }
