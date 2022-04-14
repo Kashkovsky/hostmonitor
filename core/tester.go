@@ -3,15 +3,13 @@ package core
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"time"
 )
 
 type TestResult struct {
-	Id       string
-	url      url.URL
-	status   string
-	duration time.Duration
+	Id   string
+	url  url.URL
+	ping string
 }
 
 type Tester struct {
@@ -31,28 +29,28 @@ func NewTester(config *WatchConfig, out chan TestResult, quit chan bool) Tester 
 }
 
 func (t *Tester) Test(url *url.URL) {
-	tp := NewTransport(t.requestTimeout)
-
 	for {
 		select {
 		case <-t.quit:
 			return
 		default:
-			_, err := tp.Dial(url.Scheme, url.Host)
-
-			if err != nil {
-				t.out <- TestResult{Id: url.Host, url: *url, status: formatError(err, url), duration: tp.ConnDuration()}
-				return
-			}
-
-			t.out <- TestResult{Id: url.Host, url: *url, status: "OK", duration: tp.Duration()}
+			pass := t.ping(url)
+			t.out <- TestResult{Id: url.Host, url: *url, ping: fmt.Sprintf("%d/10", pass)}
 			time.Sleep(t.testInterval)
 		}
 
 	}
 }
 
-func formatError(err error, url *url.URL) string {
-	m := regexp.MustCompile(fmt.Sprintf(`(net/http: )| \(.*\)|(dial .* %s: )`, url.Host))
-	return m.ReplaceAllString(err.Error(), "")
+func (t *Tester) ping(url *url.URL) int {
+	tp := NewTransport(t.requestTimeout)
+	pass := 0
+	for i := 0; i < 10; i++ {
+		_, err := tp.Dial(url.Scheme, url.Host)
+		if err == nil {
+			pass++
+		}
+	}
+
+	return pass
 }
