@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"sync"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -30,7 +31,14 @@ func NewPrinter() Printer {
 	t := table.NewWriter()
 	t.SetStyle(table.StyleColoredBright)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Address", "Ping"})
+	t.AppendHeader(table.Row{"Address", "TCP", "HTTP status", "HTTP Latency"})
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{
+			Name:     "HTTP status",
+			WidthMin: 50,
+			WidthMax: 50,
+		},
+	})
 
 	return Printer{clearFns: clear, t: t}
 }
@@ -41,7 +49,12 @@ func (p *Printer) ToTable(results *sync.Map) {
 	results.Range(func(k any, r interface{}) bool {
 		testResult, ok := r.(TestResult)
 		if ok {
-			p.t.AppendRow(table.Row{k, testResult.ping})
+			p.t.AppendRow(table.Row{
+				k,
+				testResult.tcp,
+				testResult.httpStatus,
+				strconv.FormatInt(testResult.duration.Milliseconds(), 10) + "ms",
+			})
 		}
 		return true
 	})
