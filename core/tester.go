@@ -16,33 +16,38 @@ type TestResult struct {
 
 type Tester struct {
 	requestTimeout time.Duration
-	testInterval time.Duration
-	out chan TestResult
+	testInterval   time.Duration
+	out            chan TestResult
+	quit           chan bool
 }
 
-func NewTester(config WatchConfig, out chan TestResult) Tester {
-	return Tester { 
-		requestTimeout: time.Duration(config.RequestTimeout) * time.Second, 
-		testInterval: time.Duration(config.TestInterval) * time.Second,
-		out: out,
+func NewTester(config *WatchConfig, out chan TestResult, quit chan bool) Tester {
+	return Tester{
+		requestTimeout: time.Duration(config.RequestTimeout) * time.Second,
+		testInterval:   time.Duration(config.TestInterval) * time.Second,
+		out:            out,
+		quit:           quit,
 	}
 }
 
-func (t *Tester)Test(url *url.URL) {
+func (t *Tester) Test(url *url.URL) {
 	tp := NewTransport(t.requestTimeout)
 
 	for {
-		t.out <- TestResult{Id: url.Host, url: *url, status: "Test"}
-
-		_, err := tp.Dial(url.Scheme, url.Host)
-
-		if err != nil {
-			t.out <- TestResult{Id: url.Host, url: *url, status: formatError(err, url), duration: tp.ConnDuration()}
+		select {
+		case <-t.quit:
 			return
-		}
+		default:
+			_, err := tp.Dial(url.Scheme, url.Host)
 
-		t.out <- TestResult{Id: url.Host, url: *url, status: "OK", duration: tp.Duration()}
-		time.Sleep(t.testInterval)
+			if err != nil {
+				t.out <- TestResult{Id: url.Host, url: *url, status: formatError(err, url), duration: tp.ConnDuration()}
+				return
+			}
+
+			t.out <- TestResult{Id: url.Host, url: *url, status: "OK", duration: tp.Duration()}
+			time.Sleep(t.testInterval)
+		}
 
 	}
 }

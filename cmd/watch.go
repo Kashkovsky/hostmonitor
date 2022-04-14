@@ -23,8 +23,6 @@ package cmd
 
 import (
 	"log"
-	"net/url"
-	"strings"
 	"sync"
 
 	"github.com/Kashkovsky/hostmonitor/core"
@@ -42,45 +40,14 @@ var watchCmd = &cobra.Command{
 
 func runWatch(cmd *cobra.Command, args []string) {
 	log.Default().Println("Testing URLs from config ", watchConfig.ConfigUrl)
+	resMap := sync.Map{}
 	printer := core.NewPrinter()
-	res := sync.Map{}
-
-	c, _, err := doWatch()
-	if err != nil {
-		log.Fatalf("Fatal: %v", err)
-		return
-	}
-
-	for {
-		rec := <-c
-		res.Store(rec.Id, rec)
-		printer.ToTable(&res)
-	}
-}
-
-func doWatch() (chan core.TestResult, int, error) {
-	config, err := watchConfig.Update()
-	outC := make(chan core.TestResult, 50)
-	if err != nil {
-		log.Fatalf("Could not obtain a config: %v", err.Error())
-
-		return outC, 0, err
-	}
-
-	tester := core.NewTester(watchConfig, outC)
-
-	records := strings.Split(config, "\n")
-	for _, addr := range records {
-		u, err := url.Parse(addr)
-		if err != nil {
-			log.Default().Printf("Invalid url: %v, skipping...", addr)
-			continue
-		}
-
-		go tester.Test(u)
-	}
-
-	return outC, len(records), nil
+	watcher := core.NewWatcher(&watchConfig)
+	
+	watcher.Watch(func(res core.TestResult) {
+		resMap.Store(res.Id, res)
+		printer.ToTable(&resMap)
+	})
 }
 
 func init() {
@@ -88,4 +55,5 @@ func init() {
 	watchCmd.Flags().StringVarP(&watchConfig.ConfigUrl, "configUrl", "c", core.ITArmyConfigURL, "Url of config containing url list")
 	watchCmd.Flags().IntVarP(&watchConfig.TestInterval, "testInterval", "i", 10, "Interval in seconds between test updates")
 	watchCmd.Flags().IntVarP(&watchConfig.RequestTimeout, "requestTimeout", "t", 5, "Request timeout")
+	watchCmd.Flags().IntVarP(&watchConfig.UpdateInterval, "updateInterval", "u", 60, "Config update interval in seconds")
 }
