@@ -52,7 +52,14 @@ func (s *Server) serveWs(w http.ResponseWriter, r *http.Request) {
 func (s *Server) startWatch() {
 	watcher := core.NewWatcher(s.config)
 	go watcher.Watch(func(res core.TestResult) {
-		s.results.Store(res.Id, res)
+		if res.InProgress {
+			_, ok := s.results.Load(res.Id)
+			if !ok {
+				s.results.Store(res.Id, res)
+			}
+		} else {
+			s.results.Store(res.Id, res)
+		}
 	})
 }
 
