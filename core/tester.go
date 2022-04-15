@@ -42,14 +42,14 @@ func (t *Tester) Test(url *url.URL) {
 			return
 		default:
 			t.out <- TestResult{
-				Id:         url.Host,
+				Id:         url.String(),
 				InProgress: true,
 				HttpStatus: "Testing...",
 			}
 			pass := t.tcp(url)
 			status, duration := t.http(url)
 			t.out <- TestResult{
-				Id:         url.Host,
+				Id:         url.String(),
 				url:        *url,
 				Tcp:        fmt.Sprintf("%d/10", pass),
 				HttpStatus: status,

@@ -2,8 +2,11 @@ package core
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -29,4 +32,34 @@ func GetStringFromURL(url string) (string, error) {
 	}
 
 	return string(buf), nil
+}
+
+func ParceUrls(urls string) []*url.URL {
+	records := strings.Split(urls, "\n")
+	results := []*url.URL{}
+	for _, addr := range records {
+		res, err := parceUrl(addr)
+		if err != nil {
+			continue
+		}
+
+		results = append(results, res)
+	}
+
+	return results
+}
+
+func parceUrl(addr string) (*url.URL, error) {
+	if addr == "" {
+		return nil, errors.New("URL is an empty string")
+	}
+	u, err := url.Parse(addr)
+	if err != nil {
+		if !strings.Contains(addr, "://") {
+			return parceUrl("http://" + addr)
+		}
+		return nil, err
+	}
+
+	return u, nil
 }

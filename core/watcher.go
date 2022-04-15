@@ -2,7 +2,6 @@ package core
 
 import (
 	"log"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -68,18 +67,9 @@ func (w *Watcher) update() error {
 }
 
 func (w *Watcher) doWatch(f func(TestResult)) error {
-	records := strings.Split(w.rawUrls, "\n")
+	records := ParceUrls(w.rawUrls)
 	for _, addr := range records {
-		if addr == "" {
-			continue
-		}
-		u, err := url.Parse(addr)
-		if err != nil {
-			log.Default().Printf("Invalid url: %v, skipping...", addr)
-			continue
-		}
-
-		go w.tester.Test(u)
+		go w.tester.Test(addr)
 		go func() {
 			for {
 				select {
