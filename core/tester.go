@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -75,7 +76,8 @@ func (t *Tester) tcp(url *url.URL) int {
 func (t *Tester) http(url *url.URL) (status string, duration time.Duration) {
 	tp := NewTransport(t.requestTimeout)
 	client := http.Client{Transport: tp, Timeout: t.requestTimeout}
-	res, err := client.Get("http://" + url.Host)
+	addr := strings.Replace(url.String(), "tcp", "http", 1)
+	res, err := client.Get(addr)
 	duration = tp.Duration()
 	if err == nil {
 		status = res.Status
