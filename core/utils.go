@@ -56,7 +56,7 @@ func parceUrl(addr string) (*url.URL, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		if !strings.Contains(addr, "://") {
-			return parceUrl("http://" + addr)
+			return parceUrl("tcp://" + addr)
 		}
 		return nil, err
 	}
