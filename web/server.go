@@ -68,7 +68,6 @@ Loop:
 			s.store.ForEach(func(res core.TestResult) bool {
 				err := c.WriteJSON(res)
 				if err != nil {
-					log.Println("Error sending a message to client", err.Error())
 					close <- true
 					return false
 				}

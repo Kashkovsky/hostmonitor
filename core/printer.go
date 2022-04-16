@@ -48,7 +48,7 @@ func (p *Printer) ToTable(results *Store) {
 		p.t.AppendRow(table.Row{
 			r.Id,
 			r.Tcp,
-			r.HttpStatus,
+			r.HttpResponse,
 			r.Duration,
 		})
 		return true

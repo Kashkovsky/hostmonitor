@@ -22,11 +22,12 @@ func (s *Store) AddOrUpdate(res TestResult) {
 		} else {
 			prev := existing.(TestResult)
 			s.results.Store(res.Id, TestResult{
-				Id:         prev.Id,
-				InProgress: true,
-				Tcp:        prev.Tcp,
-				HttpStatus: prev.HttpStatus,
-				Duration:   prev.Duration,
+				Id:           prev.Id,
+				InProgress:   true,
+				Tcp:          prev.Tcp,
+				HttpResponse: prev.HttpResponse,
+				Duration:     prev.Duration,
+				Status:       prev.Status,
 			})
 		}
 	} else {
