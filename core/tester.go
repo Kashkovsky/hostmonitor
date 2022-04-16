@@ -9,15 +9,6 @@ import (
 	"time"
 )
 
-type TestResult struct {
-	Id         string `json:"id"`
-	InProgress bool   `json:"inProgress"`
-	url        url.URL
-	Tcp        string `json:"tcp"`
-	HttpStatus string `json:"httpStatus"`
-	Duration   string `json:"duration"`
-}
-
 type Tester struct {
 	requestTimeout time.Duration
 	testInterval   time.Duration
@@ -40,23 +31,25 @@ func (t *Tester) Test(url *url.URL) {
 		case <-t.quit:
 			return
 		default:
+			tcp := "-"
 			t.out <- TestResult{
 				Id:         url.String(),
 				InProgress: true,
-				HttpStatus: "Testing...",
+				Tcp:        tcp,
 			}
 
-			var pass int
 			if url.Scheme == "tcp" {
-				pass = t.tcp(url)
+				pass := t.tcp(url)
+				tcp = fmt.Sprintf("%d/10", pass)
 			}
-			status, duration := t.http(url)
+			response, duration, status := t.http(url)
 			t.out <- TestResult{
-				Id:         url.String(),
-				url:        *url,
-				Tcp:        fmt.Sprintf("%d/10", pass),
-				HttpStatus: status,
-				Duration:   strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
+				Id:           url.String(),
+				url:          *url,
+				Tcp:          tcp,
+				HttpResponse: response,
+				Duration:     strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
+				Status:       status,
 			}
 			time.Sleep(t.testInterval)
 		}
@@ -76,18 +69,25 @@ func (t *Tester) tcp(url *url.URL) int {
 	return pass
 }
 
-func (t *Tester) http(url *url.URL) (status string, duration time.Duration) {
+func (t *Tester) http(url *url.URL) (statusMessage string, duration time.Duration, status string) {
 	tp := NewTransport(t.requestTimeout)
 	client := http.Client{Transport: tp, Timeout: t.requestTimeout}
 	addr := strings.Replace(url.String(), "tcp", "http", 1)
 	res, err := client.Get(addr)
 	duration = tp.Duration()
 	if err == nil {
-		status = res.Status
+		statusMessage = res.Status
+		if res.StatusCode >= 500 {
+			status = StatusErrResponse
+		} else {
+			status = StatusOK
+		}
 	} else if duration >= t.requestTimeout {
-		status = "TIMEOUT"
+		statusMessage = "TIMEOUT"
+		status = StatusErrResponse
 	} else {
-		status = formatError(err, url)
+		statusMessage = formatError(err, url)
+		status = StatusErr
 	}
 
 	return

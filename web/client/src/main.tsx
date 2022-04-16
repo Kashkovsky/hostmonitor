@@ -1,5 +1,6 @@
 import { lift } from '@grammarly/focal'
 import {
+  Chip,
   Paper,
   Table,
   TableBody,
@@ -14,23 +15,14 @@ import { Stream } from './stream'
 
 const Body = lift(TableBody)
 
-const getBg = (item: Stream.Item) => {
-  switch (true) {
-    case item.httpStatus.includes('OK'):
-      return '#a1ffc3'
-    case item.httpStatus.includes('connection refused'):
-      return '#ebffa1'
-    case item.httpStatus.includes('TIMEOUT'):
-      return '#fc8672'
-    default:
-      return undefined
-  }
-}
+const Tcp = ({ item }: { item: Stream.Item }) => (
+  <Chip label={item.tcp} color={Stream.Item.getTcpStatus(item)} />
+)
 
 export const Main = () => (
   <main>
     <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
+      <Table stickyHeader sx={{ minWidth: 650 }} size="small" aria-label="simple table">
         <TableHead>
           <TableRow>
             <TableCell>Address</TableCell>
@@ -47,14 +39,16 @@ export const Main = () => (
                   key={item.id}
                   sx={{
                     '&:last-child td, &:last-child th': { border: 0 },
-                    background: getBg(item)
+                    background: Stream.Item.getStatusColor(item)
                   }}
                 >
-                  <TableCell component="th" scope="row">
-                    {item.id}
+                  <TableCell width={150} component="th" scope="row">
+                    <strong>{item.id}</strong>
                   </TableCell>
-                  <TableCell align="right">{item.tcp}</TableCell>
-                  <TableCell align="right">{item.httpStatus}</TableCell>
+                  <TableCell align="right">
+                    <Tcp item={item} />
+                  </TableCell>
+                  <TableCell align="right">{item.httpResponse}</TableCell>
                   <TableCell align="right">{item.duration}</TableCell>
                 </TableRow>
               ))
