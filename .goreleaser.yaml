@@ -1,7 +1,7 @@
 project_name: hostmonitor
 before:
   hooks:
-    - make client
+    - make prepare-release
     - go mod tidy
     - go generate ./...
 builds:
