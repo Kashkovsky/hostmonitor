@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -46,8 +45,11 @@ func (t *Tester) Test(url *url.URL) {
 				InProgress: true,
 				HttpStatus: "Testing...",
 			}
-			//TODO: don't run tcp for L7
-			pass := t.tcp(url)
+
+			var pass int
+			if url.Scheme == "tcp" {
+				pass = t.tcp(url)
+			}
 			status, duration := t.http(url)
 			t.out <- TestResult{
 				Id:         url.String(),
@@ -92,6 +94,6 @@ func (t *Tester) http(url *url.URL) (status string, duration time.Duration) {
 }
 
 func formatError(err error, url *url.URL) string {
-	m := regexp.MustCompile(fmt.Sprintf(`(Get \"http://%s\": )|(net/http: )| \(.*\)|(dial .* %s: )`, url.Host, url.Host))
-	return m.ReplaceAllString(err.Error(), "")
+	parts := strings.Split(err.Error(), ":")
+	return parts[len(parts)-1]
 }
