@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"sync"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -42,19 +41,16 @@ func NewPrinter() Printer {
 	return Printer{clearFns: clear, t: t}
 }
 
-func (p *Printer) ToTable(results *sync.Map) {
+func (p *Printer) ToTable(results *Store) {
 	p.Clear()
 	p.t.ResetRows()
-	results.Range(func(k any, r interface{}) bool {
-		testResult, ok := r.(TestResult)
-		if ok {
-			p.t.AppendRow(table.Row{
-				k,
-				testResult.Tcp,
-				testResult.HttpStatus,
-				testResult.Duration,
-			})
-		}
+	results.ForEach(func(r TestResult) bool {
+		p.t.AppendRow(table.Row{
+			r.Id,
+			r.Tcp,
+			r.HttpStatus,
+			r.Duration,
+		})
 		return true
 	})
 	p.t.SortBy([]table.SortBy{{Name: "Address"}})

@@ -43,6 +43,7 @@ func runWatch(cmd *cobra.Command, args []string) {
 	resMap := sync.Map{}
 	printer := core.NewPrinter()
 	watcher := core.NewWatcher(&watchConfig)
+	store := core.NewStore()
 
 	go func() {
 		for {
@@ -51,16 +52,7 @@ func runWatch(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	watcher.Watch(func(res core.TestResult) {
-		if res.InProgress {
-			_, ok := resMap.Load(res.Id)
-			if !ok {
-				resMap.Store(res.Id, res)
-			}
-		} else {
-			resMap.Store(res.Id, res)
-		}
-	})
+	watcher.Watch(store.AddOrUpdate)
 }
 
 func init() {
