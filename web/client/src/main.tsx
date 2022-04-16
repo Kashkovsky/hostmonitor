@@ -14,6 +14,19 @@ import { Stream } from './stream'
 
 const Body = lift(TableBody)
 
+const getBg = (item: Stream.Item) => {
+  switch (true) {
+    case item.httpStatus.includes('OK'):
+      return '#a1ffc3'
+    case item.httpStatus.includes('connection refused'):
+      return '#ebffa1'
+    case item.httpStatus.includes('TIMEOUT'):
+      return '#fc8672'
+    default:
+      return undefined
+  }
+}
+
 export const Main = () => (
   <main>
     <TableContainer component={Paper}>
@@ -30,7 +43,13 @@ export const Main = () => (
           {Stream.create().pipe(
             map(items =>
               items.map(item => (
-                <TableRow key={item.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                <TableRow
+                  key={item.id}
+                  sx={{
+                    '&:last-child td, &:last-child th': { border: 0 },
+                    background: getBg(item)
+                  }}
+                >
                   <TableCell component="th" scope="row">
                     {item.id}
                   </TableCell>

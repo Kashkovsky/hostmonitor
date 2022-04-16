@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/Kashkovsky/hostmonitor/core"
@@ -21,13 +20,13 @@ type Server struct {
 	port     int
 	upgrader *websocket.Upgrader
 	config   *core.WatchConfig
-	results  sync.Map
+	store    core.Store
 }
 
 func NewServer(config *core.WatchConfig, port int) Server {
 	var upgrader = websocket.Upgrader{}
-	results := sync.Map{}
-	return Server{port: port, upgrader: &upgrader, config: config, results: results}
+	store := core.NewStore()
+	return Server{port: port, upgrader: &upgrader, config: config, store: store}
 }
 
 func (s *Server) Run() {
@@ -41,40 +40,43 @@ func (s *Server) Run() {
 
 func (s *Server) serveWs(w http.ResponseWriter, r *http.Request) {
 	c, err := s.upgrader.Upgrade(w, r, nil)
+	close := make(chan bool)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
 	defer c.Close()
-	s.sendResults(c)
+	c.SetCloseHandler(func(_ int, _ string) error {
+		close <- true
+		return nil
+	})
+	s.sendResults(c, close)
 }
 
 func (s *Server) startWatch() {
 	watcher := core.NewWatcher(s.config)
-	go watcher.Watch(func(res core.TestResult) {
-		if res.InProgress {
-			_, ok := s.results.Load(res.Id)
-			if !ok {
-				s.results.Store(res.Id, res)
-			}
-		} else {
-			s.results.Store(res.Id, res)
-		}
-	})
+	go watcher.Watch(s.store.AddOrUpdate)
 }
 
-func (s *Server) sendResults(c *websocket.Conn) {
+func (s *Server) sendResults(c *websocket.Conn, close chan bool) {
+Loop:
 	for {
-		s.results.Range(func(_ any, res interface{}) bool {
-			err := c.WriteJSON(res)
-			if err != nil {
-				log.Println("write:", err)
-				return false
-			}
-			return true
-		})
+		select {
+		case <-close:
+			break Loop
+		default:
+			s.store.ForEach(func(res core.TestResult) bool {
+				err := c.WriteJSON(res)
+				if err != nil {
+					log.Println("Error sending a message to client", err.Error())
+					close <- true
+					return false
+				}
+				return true
+			})
 
-		time.Sleep(time.Second)
+			time.Sleep(time.Second)
+		}
 	}
 }
 

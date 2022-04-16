@@ -25,8 +25,6 @@ import (
 	"log"
 	"time"
 
-	"sync"
-
 	"github.com/Kashkovsky/hostmonitor/core"
 	"github.com/spf13/cobra"
 )
@@ -40,14 +38,13 @@ var watchCmd = &cobra.Command{
 
 func runWatch(cmd *cobra.Command, args []string) {
 	log.Default().Println("Testing URLs from config ", watchConfig.ConfigUrl)
-	resMap := sync.Map{}
 	printer := core.NewPrinter()
 	watcher := core.NewWatcher(&watchConfig)
 	store := core.NewStore()
 
 	go func() {
 		for {
-			printer.ToTable(&resMap)
+			printer.ToTable(&store)
 			time.Sleep(time.Second)
 		}
 	}()
