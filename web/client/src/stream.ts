@@ -1,10 +1,23 @@
 import { pipe } from 'fp-ts/es6/function'
 import { isNumber } from 'fp-ts/es6/number'
 import * as Ord from 'fp-ts/es6/Ord'
-import { fromEvent, map, mergeMap, Observable, retryWhen, scan, take, timer } from 'rxjs'
+import {
+  distinctUntilChanged,
+  fromEvent,
+  map,
+  mergeMap,
+  Observable,
+  retryWhen,
+  scan,
+  share,
+  take,
+  timer
+} from 'rxjs'
 import { WebSocketSubject } from 'rxjs/webSocket'
+import { boolean, string } from 'fp-ts'
+import { Atom } from '@grammarly/focal'
+import * as Eq from 'fp-ts/es6/Eq'
 import * as A from 'fp-ts/es6/Array'
-import { string } from 'fp-ts'
 
 export type Stream = Observable<Stream.Item>
 
@@ -25,6 +38,15 @@ export namespace Stream {
       StatusErr = 'Error',
       StatusErrResponse = 'ErrorResponse'
     }
+
+    export const eq: Eq.Eq<Stream.Item> = Eq.struct({
+      id: string.Eq,
+      inProgress: boolean.Eq,
+      tcp: string.Eq,
+      httpResponse: string.Eq,
+      duration: string.Eq,
+      status: string.Eq
+    })
 
     export const ord: Ord.Ord<Stream.Item> = pipe(
       Ord.contramap<string, Stream.Item>(x => x.status)(string.Ord),
@@ -65,7 +87,7 @@ export namespace Stream {
 
   export const create = () => {
     const sock = new WebSocketSubject<Stream.Item>(`ws://${location.host}/ws`)
-    return sock.pipe(
+    const collection = sock.pipe(
       retryWhen(errors =>
         errors.pipe(
           mergeMap(() => {
@@ -82,7 +104,23 @@ export namespace Stream {
         (a, c) => (a.set(c.id, c), a),
         new Map<string, Stream.Item>()
       ),
-      map(items => pipe([...items.values()], A.sort(Stream.Item.ord)))
+      share()
     )
+
+    const getItem = (id: string) =>
+      collection.pipe(
+        map(c => c.get(id)!),
+        distinctUntilChanged(Stream.Item.eq.equals)
+      )
+
+    const ids = collection.pipe(
+      map(c => [...c.keys()]),
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+    )
+
+    return {
+      ids,
+      getItem
+    }
   }
 }
