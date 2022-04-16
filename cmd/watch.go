@@ -43,9 +43,14 @@ func runWatch(cmd *cobra.Command, args []string) {
 	store := core.NewStore()
 
 	go func() {
+		ticker := time.NewTicker(time.Second)
 		for {
-			printer.ToTable(&store)
-			time.Sleep(time.Second)
+			select {
+			case <-watcher.Updated:
+				store.Clear()
+			case <-ticker.C:
+				printer.ToTable(&store)
+			}
 		}
 	}()
 

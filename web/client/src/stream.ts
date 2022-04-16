@@ -5,8 +5,10 @@ import {
   distinctUntilChanged,
   fromEvent,
   map,
+  merge,
   mergeMap,
   Observable,
+  partition,
   retryWhen,
   scan,
   share,
@@ -15,9 +17,7 @@ import {
 } from 'rxjs'
 import { WebSocketSubject } from 'rxjs/webSocket'
 import { boolean, string } from 'fp-ts'
-import { Atom } from '@grammarly/focal'
 import * as Eq from 'fp-ts/es6/Eq'
-import * as A from 'fp-ts/es6/Array'
 
 export type Stream = Observable<Stream.Item>
 
@@ -85,9 +85,34 @@ export namespace Stream {
     }
   }
 
+  export type Message = Stream.Message.Reset | Stream.Message.Result
+  export namespace Message {
+    export enum Kind {
+      reset = 'reset',
+      result = 'result'
+    }
+
+    export const isReset = (msg: Stream.Message): msg is Stream.Message.Reset =>
+      msg.kind === Stream.Message.Kind.reset
+    export const isResult = (msg: Stream.Message): msg is Stream.Message.Result =>
+      msg.kind === Stream.Message.Kind.result
+
+    export interface Reset {
+      kind: Stream.Message.Kind.reset
+    }
+
+    export interface Result {
+      kind: Stream.Message.Kind.result
+      data: Stream.Item
+    }
+  }
+
   export const create = () => {
-    const sock = new WebSocketSubject<Stream.Item>(`ws://${location.host}/ws`)
-    const collection = sock.pipe(
+    const sock = new WebSocketSubject<Stream.Message>(`ws://${location.host}/ws`)
+
+    fromEvent(window, 'beforeunload').subscribe(() => sock.unsubscribe())
+
+    const retryingSock = sock.pipe(
       retryWhen(errors =>
         errors.pipe(
           mergeMap(() => {
@@ -99,12 +124,18 @@ export namespace Stream {
             }
           })
         )
+      )
+    )
+    const [results, resets] = partition(retryingSock, Stream.Message.isResult)
+
+    const collection = merge(
+      results.pipe(
+        scan<Stream.Message.Result, Map<string, Stream.Item>>(
+          (a, c) => (a.set(c.data.id, c.data), a),
+          new Map<string, Stream.Item>()
+        )
       ),
-      scan<Stream.Item, Map<string, Stream.Item>>(
-        (a, c) => (a.set(c.id, c), a),
-        new Map<string, Stream.Item>()
-      ),
-      share()
+      resets.pipe(map(() => new Map<string, Stream.Item>()))
     )
 
     const getItem = (id: string) =>

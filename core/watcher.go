@@ -7,6 +7,7 @@ import (
 )
 
 type Watcher struct {
+	Updated chan bool
 	config  *WatchConfig
 	rawUrls string
 	tester  Tester
@@ -17,12 +18,14 @@ type Watcher struct {
 func NewWatcher(config *WatchConfig) Watcher {
 	outC := make(chan TestResult, 50)
 	quit := make(chan bool)
+	updated := make(chan bool)
 	tester := NewTester(config, outC, quit)
 	return Watcher{
-		config: config,
-		tester: tester,
-		quit:   quit,
-		out:    outC,
+		Updated: updated,
+		config:  config,
+		tester:  tester,
+		quit:    quit,
+		out:     outC,
 	}
 }
 
@@ -61,6 +64,7 @@ func (w *Watcher) update() error {
 	} else {
 		w.rawUrls = config
 		log.Default().Println("New URLs have been applied")
+		w.Updated <- true
 	}
 
 	return nil

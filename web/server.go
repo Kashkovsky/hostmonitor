@@ -21,16 +21,28 @@ type Server struct {
 	upgrader *websocket.Upgrader
 	config   *core.WatchConfig
 	store    core.Store
+	watcher  core.Watcher
+	close    chan bool
 }
 
 func NewServer(config *core.WatchConfig, port int) Server {
-	var upgrader = websocket.Upgrader{}
+	upgrader := websocket.Upgrader{}
+	watcher := core.NewWatcher(config)
 	store := core.NewStore()
-	return Server{port: port, upgrader: &upgrader, config: config, store: store}
+	close := make(chan bool)
+
+	return Server{
+		port:     port,
+		watcher:  watcher,
+		upgrader: &upgrader,
+		config:   config,
+		store:    store,
+		close:    close,
+	}
 }
 
 func (s *Server) Run() {
-	s.startWatch()
+	go s.watcher.Watch(s.store.AddOrUpdate)
 
 	http.HandleFunc("/ws", s.serveWs)
 	useOS := len(os.Args) > 1 && os.Args[1] == "live"
@@ -39,42 +51,50 @@ func (s *Server) Run() {
 }
 
 func (s *Server) serveWs(w http.ResponseWriter, r *http.Request) {
+	log.Default().Println("Creating new connection", r.RemoteAddr)
+
 	c, err := s.upgrader.Upgrade(w, r, nil)
-	close := make(chan bool)
+
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
-	defer c.Close()
+
 	c.SetCloseHandler(func(_ int, _ string) error {
-		close <- true
+		log.Default().Println("Gracefully close connection")
+		s.close <- true
 		return nil
 	})
-	s.sendResults(c, close)
+	go func(c *websocket.Conn) {
+		c.ReadMessage()
+	}(c)
+	go s.sendResults(c)
 }
 
-func (s *Server) startWatch() {
-	watcher := core.NewWatcher(s.config)
-	go watcher.Watch(s.store.AddOrUpdate)
+func (s *Server) sendJSON(c *websocket.Conn, data interface{}) bool {
+	err := c.WriteJSON(data)
+	if err != nil {
+		log.Default().Println("Error sending message", err.Error())
+		s.close <- true
+		return false
+	}
+	return true
 }
 
-func (s *Server) sendResults(c *websocket.Conn, close chan bool) {
-Loop:
+func (s *Server) sendResults(c *websocket.Conn) {
+	tick := time.NewTicker(time.Second)
 	for {
 		select {
-		case <-close:
-			break Loop
-		default:
+		case <-s.close:
+			c.Close()
+			return
+		case <-s.watcher.Updated:
+			s.store.Clear()
+			s.sendJSON(c, NewResetMessage())
+		case <-tick.C:
 			s.store.ForEach(func(res core.TestResult) bool {
-				err := c.WriteJSON(res)
-				if err != nil {
-					close <- true
-					return false
-				}
-				return true
+				return s.sendJSON(c, NewResultMessage(res))
 			})
-
-			time.Sleep(time.Second)
 		}
 	}
 }
