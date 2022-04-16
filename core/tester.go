@@ -46,6 +46,7 @@ func (t *Tester) Test(url *url.URL) {
 				InProgress: true,
 				HttpStatus: "Testing...",
 			}
+			//TODO: don't run tcp for L7
 			pass := t.tcp(url)
 			status, duration := t.http(url)
 			t.out <- TestResult{
