@@ -1,20 +1,34 @@
 # HostMonitor
 
 A simple utility to monitor host availability by given config.
-TODO
 
 ### Usage:
+
+#### Run as a CLI tool to display test metrics in terminal:
 
 ```bash
 hostmonitor watch [flags]
 ```
 
+#### Run as a web server:
+
+Web UI will be available at `http://localhost:8080`.
+The default port can be changed with a `-p` flag.
+
+```bash
+hostmonitor serve [flags]
+```
+
 ### Flags:
 
--c, --configUrl string Url of config containing url list (default "https://gist.githubusercontent.com/ddosukraine2022/f739250dba308a7a2215617b17114be9/raw/mhdos_targets_tcp.txt")
+**-c** or **--configUrl**: [string] Url of config containing url list (default "https://raw.githubusercontent.com/Kashkovsky/hostmonitor/main/itarmy_targets.txt")
 
--h, --help help for watch
+**-h** or **--help**: help for a command (e.g. `hostmonitor serve -h`)
 
--t, --requestTimeout int Request timeout (default 5)
+**-t** or **--requestTimeout**: [int] Request timeout in seconds (default 5)
 
--i, --testInterval int Interval in seconds between test updates (default 10)
+**-i** or **--testInterval**: [int] Interval between test updates in seconds (default 10)
+
+**-u** or **--updateInterval**: [int] Config update interval in seconds (default 600)
+
+**-p** or **--port**: [int] Server port (default 8080, **for web server only**)
