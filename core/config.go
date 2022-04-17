@@ -1,5 +1,10 @@
 package core
 
+import (
+	"io/ioutil"
+	"strings"
+)
+
 type WatchConfig struct {
 	ConfigUrl      string
 	TestInterval   int
@@ -8,5 +13,15 @@ type WatchConfig struct {
 }
 
 func (c *WatchConfig) UpdateURLs() (string, error) {
-	return GetStringFromURL(c.ConfigUrl)
+	if strings.Contains(c.ConfigUrl, "://") {
+		return GetStringFromURL(c.ConfigUrl)
+	}
+
+	raw, err := ioutil.ReadFile(c.ConfigUrl)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(raw), nil
 }

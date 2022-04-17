@@ -21,7 +21,7 @@ hostmonitor serve [flags]
 
 ### Flags:
 
-**-c** or **--configUrl**: [string] Url of config containing url list (default "https://raw.githubusercontent.com/Kashkovsky/hostmonitor/main/itarmy_targets.txt")
+**-c** or **--configUrl**: [string] Url of config containing url list (default "https://raw.githubusercontent.com/Kashkovsky/hostmonitor/main/itarmy_targets.txt"). Either remote url or local file path are accepted.
 
 **-h** or **--help**: help for a command (e.g. `hostmonitor serve -h`)
 
@@ -32,3 +32,12 @@ hostmonitor serve [flags]
 **-u** or **--updateInterval**: [int] Config update interval in seconds (default 600)
 
 **-p** or **--port**: [int] Server port (default 8080, **for web server only**)
+
+#### Examples:
+```bash
+# Run CLI, read urls from local file:
+./hostmonitor watch -c ./my-config.txt
+
+# Run server with remote config:
+./hostmonitor serve -c https://mydomain.com/urls.txt
+```
