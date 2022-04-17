@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Kashkovsky/hostmonitor/core"
@@ -22,14 +23,12 @@ type Server struct {
 	config   *core.WatchConfig
 	store    core.Store
 	watcher  core.Watcher
-	close    chan bool
 }
 
 func NewServer(config *core.WatchConfig, port int) Server {
 	upgrader := websocket.Upgrader{}
 	watcher := core.NewWatcher(config)
 	store := core.NewStore()
-	close := make(chan bool)
 
 	return Server{
 		port:     port,
@@ -37,12 +36,24 @@ func NewServer(config *core.WatchConfig, port int) Server {
 		upgrader: &upgrader,
 		config:   config,
 		store:    store,
-		close:    close,
 	}
 }
 
 func (s *Server) Run() {
-	go s.watcher.Watch(s.store.AddOrUpdate)
+	go s.watcher.Watch()
+	go func() {
+		for {
+			select {
+			case <-s.watcher.Updated:
+				log.Default().Println("Clean store...")
+				s.store.Clear()
+			case res := <-s.watcher.Out:
+				if strings.EqualFold(res.RoundId, s.watcher.RoundId.String()) {
+					s.store.AddOrUpdate(res)
+				}
+			}
+		}
+	}()
 
 	http.HandleFunc("/ws", s.serveWs)
 	useOS := len(os.Args) > 1 && os.Args[1] == "live"
@@ -52,48 +63,51 @@ func (s *Server) Run() {
 
 func (s *Server) serveWs(w http.ResponseWriter, r *http.Request) {
 	log.Default().Println("Creating new connection", r.RemoteAddr)
-
+	close := make(chan bool)
 	c, err := s.upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
-		log.Print("upgrade:", err)
+		log.Println("upgrade:", err)
 		return
 	}
 
 	c.SetCloseHandler(func(_ int, _ string) error {
-		log.Default().Println("Gracefully close connection")
-		s.close <- true
+		log.Default().Println("Gracefully closing connection")
+		close <- true
 		return nil
 	})
 	go func(c *websocket.Conn) {
 		c.ReadMessage()
 	}(c)
-	go s.sendResults(c)
+	go s.sendResults(c, close)
 }
 
-func (s *Server) sendJSON(c *websocket.Conn, data interface{}) bool {
+func (s *Server) sendJSON(c *websocket.Conn, data interface{}, close chan bool) bool {
 	err := c.WriteJSON(data)
 	if err != nil {
 		log.Default().Println("Error sending message", err.Error())
-		s.close <- true
+		close <- true
 		return false
 	}
 	return true
 }
 
-func (s *Server) sendResults(c *websocket.Conn) {
+func (s *Server) sendResults(c *websocket.Conn, close chan bool) {
 	tick := time.NewTicker(time.Second)
 	for {
 		select {
-		case <-s.close:
+		case <-close:
 			c.Close()
 			return
 		case <-s.watcher.Updated:
-			s.store.Clear()
-			s.sendJSON(c, NewResetMessage())
+			go func() {
+				log.Default().Println("Sending reset message")
+				s.sendJSON(c, NewResetMessage(), close)
+				time.Sleep(time.Second)
+			}()
 		case <-tick.C:
 			s.store.ForEach(func(res core.TestResult) bool {
-				return s.sendJSON(c, NewResultMessage(res))
+				return s.sendJSON(c, NewResultMessage(res), close)
 			})
 		}
 	}

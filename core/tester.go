@@ -7,28 +7,28 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Tester struct {
 	requestTimeout time.Duration
 	testInterval   time.Duration
 	out            chan TestResult
-	quit           chan bool
 }
 
-func NewTester(config *WatchConfig, out chan TestResult, quit chan bool) Tester {
+func NewTester(config *WatchConfig, out chan TestResult) Tester {
 	return Tester{
 		requestTimeout: time.Duration(config.RequestTimeout) * time.Second,
 		testInterval:   time.Duration(config.TestInterval) * time.Second,
 		out:            out,
-		quit:           quit,
 	}
 }
 
-func (t *Tester) Test(url *url.URL) {
+func (t *Tester) Test(id uuid.UUID, url *url.URL, quit <-chan bool) {
 	for {
 		select {
-		case <-t.quit:
+		case <-quit:
 			return
 		default:
 			tcp := "-"
@@ -36,6 +36,7 @@ func (t *Tester) Test(url *url.URL) {
 				Id:         url.String(),
 				InProgress: true,
 				Tcp:        tcp,
+				RoundId:    id.String(),
 			}
 
 			if url.Scheme == "tcp" {
@@ -50,6 +51,7 @@ func (t *Tester) Test(url *url.URL) {
 				HttpResponse: response,
 				Duration:     strconv.FormatInt(duration.Milliseconds(), 10) + "ms",
 				Status:       status,
+				RoundId:      id.String(),
 			}
 			time.Sleep(t.testInterval)
 		}

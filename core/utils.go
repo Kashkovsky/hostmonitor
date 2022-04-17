@@ -63,3 +63,15 @@ func parceUrl(addr string) (*url.URL, error) {
 
 	return u, nil
 }
+
+func FanIn[T interface{}](cs ...<-chan T) <-chan T {
+	c := make(chan T)
+	for _, ci := range cs {
+		go func(cv <-chan T) {
+			for {
+				c <- <-cv
+			}
+		}(ci)
+	}
+	return c
+}

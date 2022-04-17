@@ -16,4 +16,5 @@ type TestResult struct {
 	HttpResponse string `json:"httpResponse"`
 	Duration     string `json:"duration"`
 	Status       string `json:"status"`
+	RoundId      string
 }

@@ -1,6 +1,8 @@
 package core
 
-import "sync"
+import (
+	"sync"
+)
 
 type Store struct {
 	results sync.Map
@@ -36,7 +38,10 @@ func (s *Store) AddOrUpdate(res TestResult) {
 }
 
 func (s *Store) Clear() {
-	s.results = sync.Map{}
+	s.results.Range(func(k, _ any) bool {
+		s.results.Delete(k)
+		return true
+	})
 }
 
 func (s *Store) ForEach(f func(TestResult) bool) {

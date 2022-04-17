@@ -4,6 +4,7 @@ import * as Ord from 'fp-ts/es6/Ord'
 import {
   distinctUntilChanged,
   fromEvent,
+  ignoreElements,
   map,
   merge,
   mergeMap,
@@ -11,8 +12,8 @@ import {
   partition,
   retryWhen,
   scan,
-  share,
   take,
+  tap,
   timer
 } from 'rxjs'
 import { WebSocketSubject } from 'rxjs/webSocket'
@@ -135,7 +136,7 @@ export namespace Stream {
           new Map<string, Stream.Item>()
         )
       ),
-      resets.pipe(map(() => new Map<string, Stream.Item>()))
+      resets.pipe(tap(() => location.reload()), ignoreElements())
     )
 
     const getItem = (id: string) =>

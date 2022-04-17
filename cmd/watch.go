@@ -23,6 +23,7 @@ package cmd
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/Kashkovsky/hostmonitor/core"
@@ -42,19 +43,25 @@ func runWatch(cmd *cobra.Command, args []string) {
 	watcher := core.NewWatcher(&watchConfig)
 	store := core.NewStore()
 
+	go watcher.Watch()
+
 	go func() {
-		ticker := time.NewTicker(time.Second)
 		for {
 			select {
 			case <-watcher.Updated:
 				store.Clear()
-			case <-ticker.C:
-				printer.ToTable(&store)
+			case res := <-watcher.Out:
+				if strings.EqualFold(res.RoundId, watcher.RoundId.String()) {
+					store.AddOrUpdate(res)
+				}
 			}
 		}
 	}()
 
-	watcher.Watch(store.AddOrUpdate)
+	for {
+		printer.ToTable(&store)
+		time.Sleep(time.Second)
+	}
 }
 
 func init() {
