@@ -1,0 +1,1 @@
+curl https://i.jpillora.com/Kashkovsky/hostmonitor! | bash
