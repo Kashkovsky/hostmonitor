@@ -2,6 +2,11 @@
 
 A simple utility to monitor host availability by given config.
 
+### Installation:
+```bash
+source <(curl https://raw.githubusercontent.com/Kashkovsky/hostmonitor/main/install.sh)
+```
+
 ### Usage:
 
 #### Run as a CLI tool to display test metrics in terminal:
