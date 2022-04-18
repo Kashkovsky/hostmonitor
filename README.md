@@ -10,6 +10,8 @@ A simple utility to monitor host availability by given config.
 hostmonitor watch [flags]
 ```
 
+![CLI](./assets/cli.png)
+
 #### Run as a web server:
 
 Web UI will be available at `http://localhost:8080`.
@@ -18,6 +20,8 @@ The default port can be changed with a `-p` flag.
 ```bash
 hostmonitor serve [flags]
 ```
+
+![Server](./assets/server.png)
 
 ### Flags:
 
